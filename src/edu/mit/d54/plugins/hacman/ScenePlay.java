@@ -2,11 +2,23 @@ package edu.mit.d54.plugins.hacman;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.awt.image.BufferedImage;
 
 import edu.mit.d54.Display2D;
+import java.io.IOException;
+import javax.imageio.ImageIO;
 
 
 public class ScenePlay extends Object {
+
+	private static final int kSpawnWallColor = 0x000080;
+	private static final int kSpawnPlayerColor = 0xFFFF00;
+	private static final int kSpawnPelletColor = 0x333333;
+	private static final int kSpawnPelletPowerColor = 0xFFFFFF;
+	private static final int kSpawnGhostInkyColor = 0x00FFFF;
+	private static final int kSpawnGhostPinkyColor = 0xFF0080;
+	private static final int kSpawnGhostBlinkyColor = 0xFF0000;
+	private static final int kSpawnGhostClydeColor = 0xFF8000;
 
 	private Display2D d;
 
@@ -27,65 +39,142 @@ public class ScenePlay extends Object {
 	private ArrayList<Pellet> pellets;
 	private ArrayList<Ghost> ghosts;
 
-	public ScenePlay(Display2D display) {
+	public ScenePlay(Display2D display) throws IOException {
 
 		d = display;
 
-		// we start in the the playing state
+		// 'Playing' is the default state
 		state = State.Playing;
 
-		// TODO: generate walls from map
+		// we need to set up our arrays before we populate them
 		walls = new ArrayList<Transform>();
-
-		Transform wall = new Transform();
-		wall.x = 6;
-		wall.y = 8;
-		walls.add(wall);
-
-		// TODO: generate pellets from map
 		pellets = new ArrayList<Pellet>();
-
-		Pellet pellet = new Pellet();
-		pellet.transform.x = 2;
-		pellet.transform.y = 8;
-		pellets.add(pellet);
-
-		Pellet pellet2 = new Pellet();
-		pellet2.isPower = true;
-		pellet2.transform.x = 5;
-		pellet2.transform.y = 5;
-		pellets.add(pellet2);
-
-		// create the ghosts
 		ghosts = new ArrayList<Ghost>();
 
-		// create INKY, PINKY, BLINKY, and CLYDE
-		Ghost inky = new Ghost();
-		inky.hue = 0.65f;
-		ghosts.add(inky);
-
-		// TODO: position ghosts based on spawn points of map
-		inky.transform.setStartPosition(4,10);
-
+		// we set up our characters before reading the map; we're going to position them based off the map though
+		//
 		// create MS HAC MAN
 		player = new Player();
 		player.numLives = kPlayerLivesStart;
 
-		// TODO: position player based on spawn point of map
-		player.transform.setStartPosition(4,8);
+		// read in the current level
+		BufferedImage levelImg = ImageIO.read(ScenePlay.class.getResourceAsStream("/images/hacman/hacman_lvl1.png"));
 
+		// we generate walls, ghosts, pellets (regular and power), and the player from the map
+		// we do this by color
+		for (int iX = 0; iX < levelImg.getWidth(); ++iX) {
+			for (int iY = 0; iY < levelImg.getHeight(); ++iY) {
+
+				int pixelCol = levelImg.getRGB(iX,iY) & 0xFFFFFF;
+
+				// WALLS!
+				if (pixelCol == kSpawnWallColor) {
+					Transform wall = new Transform();
+					wall.x = iX;
+					wall.y = iY;
+					walls.add(wall);
+				}
+
+				// MS. HACK MAN
+				else if (pixelCol == kSpawnPlayerColor) {
+					player.transform.setStartPosition(iX,iY);
+				}
+
+				// PELLETS
+				//
+				// regular
+				else if (pixelCol == kSpawnPelletColor) {
+					Pellet pellet = new Pellet();
+					pellet.transform.x = iX;
+					pellet.transform.y = iY;
+					pellets.add(pellet);
+				}
+				// powerrr!!!
+				else if (pixelCol == kSpawnPelletPowerColor) {
+					Pellet pellet = new Pellet();
+					pellet.isPower = true;
+					pellet.transform.x = iX;
+					pellet.transform.y = iY;
+					pellets.add(pellet);
+				}
+
+				// G-G-Gh-Ghosts!
+				//
+				// INKY, PINKY, BLINKY, & CLYDE
+				else if (pixelCol == kSpawnGhostInkyColor ||
+					pixelCol == kSpawnGhostPinkyColor ||
+					pixelCol == kSpawnGhostBlinkyColor ||
+					pixelCol == kSpawnGhostClydeColor) {
+
+					Ghost ghost = new Ghost();
+					ghost.hue = 0.65f; // for now
+					ghost.transform.setStartPosition(iX,iY);
+					ghosts.add(ghost);
+				}
+
+				// meh
+				else {
+					System.out.println("undetected pixel color: " + pixelCol);
+				}
+
+
+			}
+		}
+
+		// TODO: generate pellets from map
+		// pellets = new ArrayList<Pellet>();
+
+		// Pellet pellet = new Pellet();
+		// pellet.transform.x = 2;
+		// pellet.transform.y = 8;
+		// pellets.add(pellet);
+
+		// Pellet pellet2 = new Pellet();
+		// pellet2.isPower = true;
+		// pellet2.transform.x = 5;
+		// pellet2.transform.y = 5;
+		// pellets.add(pellet2);
+
+		// create the ghosts
+		// ghosts = new ArrayList<Ghost>();
+
+		// create INKY, PINKY, BLINKY, and CLYDE
+		// Ghost inky = new Ghost();
+		// inky.hue = 0.65f;
+		// ghosts.add(inky);
+
+		// TODO: position ghosts based on spawn points of map
+		// inky.transform.setStartPosition(4,10);
+
+		// TODO: position player based on spawn point of map
+		// player.transform.setStartPosition(4,8);
+
+		// COLLISIONS!
+		//
 		// our collision system requires only moving objects to map to things with which they can collide
 		collisionMap = new HashMap<Transform,ArrayList<Transform>>();
-
+		//
+		// collide player with walls
 		ArrayList<Transform> playerColliders = new ArrayList<Transform>();
 		for (Transform transform : walls) {
 			playerColliders.add(transform);
 		}
 		collisionMap.put(player.transform,playerColliders);
+		// collide ghosts with walls
+		ArrayList<Transform> ghostColliders = new ArrayList<Transform>();
+		for (Transform transform : walls) {
+			ghostColliders.add(transform);
+		}
+		for (Ghost ghost : ghosts) {
+			collisionMap.put(ghost.transform,ghostColliders);
+		}
 
 		// all moving objects should be added to the physics list, so they can be moved
 		physicsTransfoms = new ArrayList<Transform>();
 		physicsTransfoms.add(player.transform);
+		for (Ghost ghost : ghosts) {
+			physicsTransfoms.add(ghost.transform);
+		}
 
 		// we need to set up our initial time here, so that the first update doesn't get sad
 		timeSinceLastUpdate = System.nanoTime();
