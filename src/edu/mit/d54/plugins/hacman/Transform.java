@@ -8,6 +8,9 @@ public class Transform extends Object {
 	public float vx;
 	public float vy;
 
+	public float startX;
+	public float startY;
+
 	public Transform() {
 
 	}
@@ -15,5 +18,18 @@ public class Transform extends Object {
 	public void setVelocity(float _vx, float _vy) {
 		vx = _vx;
 		vy = _vy;
+	}
+
+	public void setStartPosition(float _x, float _y) {
+		startX = _x;
+		startY = _y;
+	}
+
+	public void reset() {
+		
+		x = startX;
+		y = startY;
+
+		setVelocity(0,0);
 	}
 }

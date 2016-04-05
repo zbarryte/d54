@@ -1,12 +1,12 @@
 package edu.mit.d54.plugins.hacman;
 
-public class Player extends Object {
+public class Ghost extends Object {
 
-	public int numLives;
+	public float hue;
 
 	public Transform transform;
 
-	public Player() {
+	public Ghost() {
 		transform = new Transform();
 	}
 }
