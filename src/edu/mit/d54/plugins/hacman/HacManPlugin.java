@@ -7,6 +7,9 @@ import edu.mit.d54.ArcadeListener;
 import edu.mit.d54.Display2D;
 import edu.mit.d54.DisplayPlugin;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+
 /**
  * 
  */
@@ -17,27 +20,40 @@ public class HacManPlugin extends DisplayPlugin implements ArcadeListener {
 	private ArcadeController controller;
 	private Player player;
 
-	private java.util.ArrayList<Transform> physicsTransfoms;
+	private ArrayList<Transform> physicsTransfoms;
 	private long timeSinceLastUpdate;
 
-	private java.util.HashMap<Transform,java.util.ArrayList<Transform>> collisionMap;
+	private HashMap<Transform,ArrayList<Transform>> collisionMap;
 
-	private java.util.ArrayList<Transform> walls;
+	private ArrayList<Transform> walls;
+	private ArrayList<Pellet> pellets;
 
 	public HacManPlugin(Display2D display, double framerate) throws IOException {
 
 		super(display, framerate);
 
+		// we need to do this so we can set the listener later
 		controller = ArcadeController.getInstance();
 
+		ResetGame();
+	}
 
-		walls = new java.util.ArrayList<Transform>();
-
+	private void ResetGame() {
 		// TODO: generate walls from map
+		walls = new ArrayList<Transform>();
+
 		Transform wall = new Transform();
 		wall.x = 6;
 		wall.y = 8;
 		walls.add(wall);
+
+		// TODO: generate pellets from map
+		pellets = new ArrayList<Pellet>();
+
+		Pellet pellet = new Pellet();
+		pellet.transform.x = 2;
+		pellet.transform.y = 8;
+		pellets.add(pellet);
 
 		// create the player
 		player = new Player();
@@ -47,16 +63,16 @@ public class HacManPlugin extends DisplayPlugin implements ArcadeListener {
 		player.transform.y = 8;
 
 		// our collision system requires only moving objects to map to things with which they can collide
-		collisionMap = new java.util.HashMap<Transform,java.util.ArrayList<Transform>>();
+		collisionMap = new HashMap<Transform,ArrayList<Transform>>();
 
-		java.util.ArrayList<Transform> playerColliders = new java.util.ArrayList<Transform>();
+		ArrayList<Transform> playerColliders = new ArrayList<Transform>();
 		for (Transform transform : walls) {
 			playerColliders.add(transform);
 		}
 		collisionMap.put(player.transform,playerColliders);
 
 		// all moving objects should be added to the physics list, so they can be moved
-		physicsTransfoms = new java.util.ArrayList<Transform>();
+		physicsTransfoms = new ArrayList<Transform>();
 		physicsTransfoms.add(player.transform);
 
 		// we need to set up our initial time here, so that the first update doesn't get sad
@@ -94,8 +110,26 @@ public class HacManPlugin extends DisplayPlugin implements ArcadeListener {
 	@Override
 	protected void loop() {
 		
+		// Advance to the next stage if all pellets have been eaten! (cycle back to the first if it's the last one)
+		if (pellets.size() <= 0) {ResetGame();}
+
+		// Lose a life if the player gets haunted or whatever by a ghost
+
 		// PHYSICS!
 		UpdatePhysicsTransforms();
+
+		// Eat Pellets
+		ArrayList<Pellet> pelletsToRemove = new ArrayList<Pellet>();
+		for (Pellet pellet : pellets) {
+			if ((int)pellet.transform.x == (int)player.transform.x && (int)pellet.transform.y == (int)player.transform.y) {
+				System.out.println("om nom");
+				pelletsToRemove.add(pellet);
+			}
+		}
+		for (Pellet pellet : pelletsToRemove) {
+			pellets.remove(pellet);
+		}
+
 
 		// DRAW!
 		Display2D d = getDisplay();
@@ -105,6 +139,10 @@ public class HacManPlugin extends DisplayPlugin implements ArcadeListener {
 			d.setPixelHSB((int)wall.x,(int)wall.y,0.65f,1,1);
 		}
 		// draw pellets
+		for (Pellet pellet : pellets) {
+			// TODO: make power pellets brighter than regular pellets
+			d.setPixelHSB((int)pellet.transform.x,(int)pellet.transform.y,0,0,1);
+		}
 		// draw ghosts
 		// draw player
 		d.setPixelHSB((int)player.transform.x,(int)player.transform.y,0.15f,1,1);
@@ -142,7 +180,7 @@ public class HacManPlugin extends DisplayPlugin implements ArcadeListener {
 
 			// we only want to move if we won't collide with something solid
 			boolean canMove = true;
-			java.util.ArrayList<Transform> colliders = collisionMap.get(transform);
+			ArrayList<Transform> colliders = collisionMap.get(transform);
 			if (colliders != null) {
 				for (Transform collider : colliders) {
 					if ((int)xNew == (int)collider.x && (int)yNew == (int)collider.y) {
