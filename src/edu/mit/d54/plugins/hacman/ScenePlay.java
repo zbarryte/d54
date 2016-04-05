@@ -27,7 +27,6 @@ public class ScenePlay extends Object {
 	public State state;
 
 	private static final float kPlayerSpeed = 4.0f;
-	private static final int kPlayerLivesStart = 3;
 
 	private Player player;
 
@@ -40,12 +39,9 @@ public class ScenePlay extends Object {
 	private ArrayList<Pellet> pellets;
 	private ArrayList<Ghost> ghosts;
 
-	public ScenePlay(Display2D display) throws IOException {
+	public ScenePlay(Display2D display, String levelName) throws IOException {
 
 		d = display;
-
-		// 'Playing' is the default state
-		state = State.Playing;
 
 		// we need to set up our arrays before we populate them
 		walls = new ArrayList<Transform>();
@@ -56,10 +52,9 @@ public class ScenePlay extends Object {
 		//
 		// create MS HAC MAN
 		player = new Player();
-		player.numLives = kPlayerLivesStart;
 
 		// read in the current level
-		BufferedImage levelImg = ImageIO.read(ScenePlay.class.getResourceAsStream("/images/hacman/hacman_lvl1.png"));
+		BufferedImage levelImg = ImageIO.read(ScenePlay.class.getResourceAsStream(levelName));
 
 		// we generate walls, ghosts, pellets (regular and power), and the player from the map
 		// we do this by color
@@ -127,8 +122,6 @@ public class ScenePlay extends Object {
 
 					ghost.hue = hue;
 
-					System.out.println(pixelCol + " yielded " + hue);
-
 					ghost.transform.setStartPosition(iX,iY);
 					ghosts.add(ghost);
 				}
@@ -176,12 +169,10 @@ public class ScenePlay extends Object {
 		restartLevel();
 	}
 
-	private void restartLevel() {
+	public void restartLevel() {
 
-		if (player.numLives < 0) {
-			state = State.Lost;
-			return;
-		}
+		// if we don't set the state, the game will still think it's losing/winning
+		state = State.Playing;
 
 		player.transform.reset();
 
@@ -200,9 +191,7 @@ public class ScenePlay extends Object {
 			if ((int)player.transform.x == (int)ghost.transform.x && (int)player.transform.y == (int)ghost.transform.y) {
 				// TODO: handle woobly ghosts
 
-				player.numLives--;
-
-				restartLevel();
+				state = State.Lost;
 			}
 		}
 		// Then reset ghost and player positions; pellets should remain as they were
@@ -300,4 +289,5 @@ public class ScenePlay extends Object {
 			
 		}
 	}
-}
+
+ }
