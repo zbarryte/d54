@@ -30,6 +30,7 @@ public class ScenePlay extends Object {
 	public State state;
 
 	private static final float kPlayerSpeed = 4.0f;
+	private static final float kGhostSpeed = 2.0f;
 
 	private Player player;
 
@@ -74,7 +75,7 @@ public class ScenePlay extends Object {
 					walls.add(wall);
 				}
 
-				// MS. HACK MAN
+				// MS. HAC MAN
 				else if (pixelCol == kSpawnPlayerColor) {
 					player.transform.setStartPosition(iX,iY);
 				}
@@ -127,6 +128,7 @@ public class ScenePlay extends Object {
 
 					ghost.transform.setStartPosition(iX,iY);
 					ghosts.add(ghost);
+
 				}
 
 				// // meh
@@ -199,7 +201,8 @@ public class ScenePlay extends Object {
 			if ((int)player.transform.x == (int)ghost.transform.x && (int)player.transform.y == (int)ghost.transform.y) {
 				
 				if (ghost.isWoobly) {
-
+					ghost.transform.reset();
+					ghost.isWoobly = false;
 				} else {
 					state = State.Lost;
 				}
