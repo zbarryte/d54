@@ -7,6 +7,7 @@ import java.awt.image.BufferedImage;
 import edu.mit.d54.Display2D;
 import java.io.IOException;
 import javax.imageio.ImageIO;
+import java.lang.Math;
 
 
 public class ScenePlay extends Object {
@@ -25,7 +26,7 @@ public class ScenePlay extends Object {
 	public enum State {Playing, Won, Lost};
 	public State state;
 
-	private static final float kPlayerSpeed = 2.0f;
+	private static final float kPlayerSpeed = 4.0f;
 	private static final int kPlayerLivesStart = 3;
 
 	private Player player;
@@ -107,47 +108,39 @@ public class ScenePlay extends Object {
 					pixelCol == kSpawnGhostClydeColor) {
 
 					Ghost ghost = new Ghost();
-					ghost.hue = 0.65f; // for now
+
+					// spooooooky fancy math to get the right hue for the rgb value
+					float r = (float)((pixelCol >> 16) & 0xFF) / 255.0f;
+					float g = (float)((pixelCol >> 8) & 0xFF) / 255.0f;
+					float b = (float)((pixelCol >> 0) & 0xFF) / 255.0f;
+
+					float max = Math.max(r,Math.max(g,b));
+					float min = Math.min(r,Math.min(g,b));
+
+					float hue = 0.0f;
+					if (max == r) {hue = (g - b)/(max - min);}
+					else if (max == g) {hue = 2.0f + (b - r)/(max - min);}
+					else if (max == b) {hue = 4.0f + (r - g)/(max - min);}
+
+					hue /= 6.0f;
+					if (hue < 0.0f) {hue += 1.0f;}
+
+					ghost.hue = hue;
+
+					System.out.println(pixelCol + " yielded " + hue);
+
 					ghost.transform.setStartPosition(iX,iY);
 					ghosts.add(ghost);
 				}
 
-				// meh
-				else {
-					System.out.println("undetected pixel color: " + pixelCol);
-				}
+				// // meh
+				// else {
+				// 	System.out.println("undetected pixel color: " + pixelCol);
+				// }
 
 
 			}
 		}
-
-		// TODO: generate pellets from map
-		// pellets = new ArrayList<Pellet>();
-
-		// Pellet pellet = new Pellet();
-		// pellet.transform.x = 2;
-		// pellet.transform.y = 8;
-		// pellets.add(pellet);
-
-		// Pellet pellet2 = new Pellet();
-		// pellet2.isPower = true;
-		// pellet2.transform.x = 5;
-		// pellet2.transform.y = 5;
-		// pellets.add(pellet2);
-
-		// create the ghosts
-		// ghosts = new ArrayList<Ghost>();
-
-		// create INKY, PINKY, BLINKY, and CLYDE
-		// Ghost inky = new Ghost();
-		// inky.hue = 0.65f;
-		// ghosts.add(inky);
-
-		// TODO: position ghosts based on spawn points of map
-		// inky.transform.setStartPosition(4,10);
-
-		// TODO: position player based on spawn point of map
-		// player.transform.setStartPosition(4,8);
 
 		// COLLISIONS!
 		//
@@ -249,7 +242,7 @@ public class ScenePlay extends Object {
 		}
 		// draw ghosts
 		for (Ghost ghost : ghosts) {
-			d.setPixelHSB((int)ghost.transform.x,(int)ghost.transform.y,ghost.hue,0.5f,1.0f);
+			d.setPixelHSB((int)ghost.transform.x,(int)ghost.transform.y,ghost.hue,1.0f,1.0f);
 		}
 		// draw player
 		d.setPixelHSB((int)player.transform.x,(int)player.transform.y,0.15f,1,1);
