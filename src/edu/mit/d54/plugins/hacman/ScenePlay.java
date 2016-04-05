@@ -250,7 +250,7 @@ public class ScenePlay extends Object {
 
 		// draw map
 		for (Transform wall : walls) {
-			d.setPixelHSB((int)wall.x,(int)wall.y,0.65f,1,1);
+			d.setPixelHSB((int)wall.x,(int)wall.y,0.7f,1,1);
 		}
 		// draw pellets
 		for (Pellet pellet : pellets) {
