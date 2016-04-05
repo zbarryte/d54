@@ -21,6 +21,9 @@ public class ScenePlay extends Object {
 	private static final int kSpawnGhostBlinkyColor = 0xFF0000;
 	private static final int kSpawnGhostClydeColor = 0xFF8000;
 
+	private static final float wooblinessPeriod = 15.0f;
+	private float wobblinessTimer;
+
 	private Display2D d;
 
 	public enum State {Playing, Won, Lost};
@@ -183,21 +186,39 @@ public class ScenePlay extends Object {
 
 	public void update() {
 
+		// it's just nice to have a delta... and we need it later
+		long currentTime = System.nanoTime();
+		float dt = (float)(currentTime - timeSinceLastUpdate) / 1000000000.0f;
+		timeSinceLastUpdate = currentTime;
+
 		// Advance to the next stage if all pellets have been eaten! (cycle back to the first if it's the last one)
 		if (pellets.size() <= 0) {state = State.Won;}
 
 		// Lose a life if the player gets haunted or whatever by a ghost
 		for (Ghost ghost : ghosts) {
 			if ((int)player.transform.x == (int)ghost.transform.x && (int)player.transform.y == (int)ghost.transform.y) {
-				// TODO: handle woobly ghosts
+				
+				if (ghost.isWoobly) {
 
-				state = State.Lost;
+				} else {
+					state = State.Lost;
+				}
 			}
 		}
 		// Then reset ghost and player positions; pellets should remain as they were
 
 		// PHYSICS!
-		UpdatePhysicsTransforms();
+		UpdatePhysicsTransforms(dt);
+
+		// UnWobblify Ghosts
+		if (wobblinessTimer > 0) {
+			wobblinessTimer -= dt;
+			if (wobblinessTimer < 0) {
+				for (Ghost ghost : ghosts) {
+					ghost.isWoobly = false;
+				}
+			}
+		}
 
 		// Eat Pellets
 		boolean didEatPowerPellet = false;
@@ -205,16 +226,20 @@ public class ScenePlay extends Object {
 		for (Pellet pellet : pellets) {
 			if ((int)pellet.transform.x == (int)player.transform.x && (int)pellet.transform.y == (int)player.transform.y) {
 				if (pellet.isPower) {didEatPowerPellet = true;}
-				System.out.println("om nom");
+				// System.out.println("om nom");
 				pelletsToRemove.add(pellet);
 			}
 		}
 		for (Pellet pellet : pelletsToRemove) {
 			pellets.remove(pellet);
 		}
-		// TODO: make ghost all woobly for a while if a power pellet was eaten
+		// the ghosts get all woobly if you eat a power pellet
 		if (didEatPowerPellet) {
-			System.out.println("POWER!");
+			// System.out.println("POWER!");
+			for (Ghost ghost : ghosts) {
+				wobblinessTimer = wooblinessPeriod;
+				ghost.isWoobly = true;
+			}
 		}
 
 
@@ -231,7 +256,8 @@ public class ScenePlay extends Object {
 		}
 		// draw ghosts
 		for (Ghost ghost : ghosts) {
-			d.setPixelHSB((int)ghost.transform.x,(int)ghost.transform.y,ghost.hue,1.0f,1.0f);
+			float hue = ghost.isWoobly ? 0.65f : ghost.hue;
+			d.setPixelHSB((int)ghost.transform.x,(int)ghost.transform.y,hue,1.0f,1.0f);
 		}
 		// draw player
 		d.setPixelHSB((int)player.transform.x,(int)player.transform.y,0.15f,1,1);
@@ -243,11 +269,7 @@ public class ScenePlay extends Object {
 		player.transform.setVelocity(dx * kPlayerSpeed, dy * kPlayerSpeed);
 	}
 
-	private void UpdatePhysicsTransforms() {
-
-		long currentTime = System.nanoTime();
-		float dt = (float)(currentTime - timeSinceLastUpdate) / 1000000000.0f;
-		timeSinceLastUpdate = currentTime;
+	private void UpdatePhysicsTransforms(float dt) {
 
 		for (Transform transform : physicsTransfoms) {
 
