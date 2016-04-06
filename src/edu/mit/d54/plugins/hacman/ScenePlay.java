@@ -22,7 +22,7 @@ public class ScenePlay extends Object {
 	private static final int kSpawnGhostClydeColor = 0xFF8000;
 
 	private static final float wooblinessPeriod = 15.0f;
-	private float wobblinessTimer;
+	private float wooblinessTimer;
 
 	private Display2D d;
 
@@ -285,10 +285,10 @@ public class ScenePlay extends Object {
 		// PHYSICS!
 		UpdatePhysicsTransforms(dt);
 
-		// UnWobblify Ghosts
-		if (wobblinessTimer > 0) {
-			wobblinessTimer -= dt;
-			if (wobblinessTimer < 0) {
+		// UnWooblify Ghosts
+		if (wooblinessTimer > 0) {
+			wooblinessTimer -= dt;
+			if (wooblinessTimer < 0) {
 				for (Ghost ghost : ghosts) {
 					ghost.isWoobly = false;
 				}
@@ -312,7 +312,7 @@ public class ScenePlay extends Object {
 		if (didEatPowerPellet) {
 			// System.out.println("POWER!");
 			for (Ghost ghost : ghosts) {
-				wobblinessTimer = wooblinessPeriod;
+				wooblinessTimer = wooblinessPeriod;
 				ghost.isWoobly = true;
 			}
 		}
@@ -322,7 +322,9 @@ public class ScenePlay extends Object {
 
 		// draw map
 		for (Transform wall : walls) {
-			d.setPixelHSB((int)wall.x,(int)wall.y,0.7f,1,1);
+			float percentageUnwoobly = wooblinessPeriod == 0 ? 0 : 1.0f - wooblinessTimer/wooblinessPeriod;
+			float hue = 0.65f * (percentageUnwoobly);
+			d.setPixelHSB((int)wall.x,(int)wall.y,hue,1,1);
 		}
 		// draw pellets
 		for (Pellet pellet : pellets) {
