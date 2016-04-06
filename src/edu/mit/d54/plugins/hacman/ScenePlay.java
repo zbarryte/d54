@@ -233,12 +233,12 @@ public class ScenePlay extends Object {
 
 		if (state == State.Winning) {
 			winTimer -= dt;
-			if (winTimer < 0) {state = State.Won;}
+			if (winTimer <= 0) {state = State.Won; winTimer = 0;}
 		}
 
 		if (state == State.Losing) {
 			loseTimer -= dt;
-			if (loseTimer < 0) {state = State.Lost;}
+			if (loseTimer <= 0) {state = State.Lost; loseTimer = 0;}
 		}
 
 		// Gameplay logic may only happen if we're playing
@@ -376,7 +376,9 @@ public class ScenePlay extends Object {
 		for (Transform wall : walls) {
 			float percentageUnwoobly = wooblinessPeriod == 0 ? 0 : 1.0f - wooblinessTimer/wooblinessPeriod;
 			float hue = 0.65f * (percentageUnwoobly);
-			d.setPixelHSB((int)wall.x,(int)wall.y,hue,1,1);
+			float percentageWon = winPeriod == 0 ? 0.0f : winTimer/winPeriod;
+			float saturation = (float)(0.5f * (1.0f + Math.cos(Math.PI * 8.0f * percentageWon)));
+			d.setPixelHSB((int)wall.x,(int)wall.y,hue,saturation,1);
 		}
 
 		// make the pellets pulse because, grooviness
@@ -420,6 +422,10 @@ public class ScenePlay extends Object {
 		// draw player
 		float playerPulsePercentage = playerPulsePeriod == 0 ? 0.0f : 1.0f - playerPulseTimer/playerPulsePeriod;
 		float playerBrightness = (float)(0.5f * (1.0f + Math.cos(2.0f * Math.PI * playerPulsePercentage)) * 0.5f + 0.5f);
+		if (state == State.Losing) {
+			float losePercentage = losePeriod == 0.0f ? 1.0f : loseTimer/losePeriod;
+			playerBrightness *= losePercentage;
+		}
 		d.setPixelHSB((int)player.transform.x,(int)player.transform.y,0.15f,1,playerBrightness);
 
 	}
