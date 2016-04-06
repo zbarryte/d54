@@ -27,6 +27,12 @@ public class ScenePlay extends Object {
 	private static final float pelletPulsePeriod = 4.0f;
 	private float pelletPulseTimer;
 
+	private static final float playerPulsePeriod = 0.25f;
+	private float playerPulseTimer;
+
+	private static final float ghostPulsePeriod = 1.0f;
+	private float ghostPulseTimer;
+
 	private Display2D d;
 
 	public enum State {Playing, Won, Lost};
@@ -352,19 +358,39 @@ public class ScenePlay extends Object {
 		// draw pellets
 		for (Pellet pellet : pellets) {
 			float brightness = pellet.isPower ? 1.0f : 0.35f;
-			float percentage = pelletPulsePeriod == 0 ? 0.0f : pelletPulseTimer/pelletPulsePeriod;
-			brightness *= 0.5f * (1.0f + Math.cos(2.0f * Math.PI * percentage)) * 0.25f + 0.75f;
+			float pulsePercentage = pelletPulsePeriod == 0 ? 0.0f : pelletPulseTimer/pelletPulsePeriod;
+			brightness *= 0.5f * (1.0f + Math.cos(2.0f * Math.PI * pulsePercentage)) * 0.25f + 0.75f;
 			d.setPixelHSB((int)pellet.transform.x,(int)pellet.transform.y,0,0,brightness);
+		}
+
+		// pulse ghosts toooo
+		ghostPulseTimer -= dt;
+		if (ghostPulseTimer < 0) {
+			ghostPulseTimer = ghostPulsePeriod;
 		}
 
 		// draw ghosts
 		for (Ghost ghost : ghosts) {
+			float pulsePercentage = ghostPulsePeriod == 0 ? 0.0f : 1.0f - ghostPulseTimer/ghostPulsePeriod;
+			float brightness = (float)(0.5f * (1.0f + Math.cos(2.0f * Math.PI * pulsePercentage)) * 0.25f + 0.75f);
 			float hue = ghost.isWoobly ? 0.65f : ghost.hue;
-			d.setPixelHSB((int)ghost.transform.x,(int)ghost.transform.y,hue,1.0f,1.0f);
+			d.setPixelHSB((int)ghost.transform.x,(int)ghost.transform.y,hue,1.0f,brightness);
+		}
+
+		// only pulse the player when moving!
+		if (!player.transform.isStationary) {
+			playerPulseTimer -= dt;
+			if (playerPulseTimer < 0) {
+				playerPulseTimer = playerPulsePeriod;
+			}
+		} else {
+			playerPulseTimer = 0;
 		}
 
 		// draw player
-		d.setPixelHSB((int)player.transform.x,(int)player.transform.y,0.15f,1,1);
+		float playerPulsePercentage = playerPulsePeriod == 0 ? 0.0f : 1.0f - playerPulseTimer/playerPulsePeriod;
+		float playerBrightness = (float)(0.5f * (1.0f + Math.cos(2.0f * Math.PI * playerPulsePercentage)) * 0.5f + 0.5f);
+		d.setPixelHSB((int)player.transform.x,(int)player.transform.y,0.15f,1,playerBrightness);
 
 	}
 
