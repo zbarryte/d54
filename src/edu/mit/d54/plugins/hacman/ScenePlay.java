@@ -21,7 +21,7 @@ public class ScenePlay extends Object {
 	private static final int kSpawnGhostBlinkyColor = 0xFF0000;
 	private static final int kSpawnGhostClydeColor = 0xFF8000;
 
-	private static final float wooblinessPeriod = 15.0f;
+	private static final float wooblinessPeriod = 7.5f;
 	private float wooblinessTimer;
 
 	private Display2D d;
