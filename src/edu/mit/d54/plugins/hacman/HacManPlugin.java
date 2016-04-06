@@ -4,6 +4,9 @@ import java.io.IOException;
 import edu.mit.d54.ArcadeController;
 import edu.mit.d54.ArcadeListener;
 
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
 import edu.mit.d54.Display2D;
 import edu.mit.d54.DisplayPlugin;
 
@@ -13,6 +16,11 @@ import java.util.ArrayList;
  * 
  */
 public class HacManPlugin extends DisplayPlugin implements ArcadeListener {
+
+	private enum State {
+		Attract, Play,
+	}
+	private State state;
 
 	private static final int numLivesStart = 3;
 	private int numLivesCurrent;
@@ -25,9 +33,20 @@ public class HacManPlugin extends DisplayPlugin implements ArcadeListener {
 
 	private ScenePlay scenePlay;
 
+	private BufferedImage logo;
+
+	private static final float logoScrollPeriod = 10.0f;
+	private float logoScrollTimer;
+
+	private long timeSinceLastUpdate;
+
+	private int logoScrollCount;
+
 	public HacManPlugin(Display2D display, double framerate) throws IOException {
 
 		super(display, framerate);
+
+		state = State.Attract;
 
 		// we need to do this so we can set the listener later
 		controller = ArcadeController.getInstance();
@@ -38,13 +57,32 @@ public class HacManPlugin extends DisplayPlugin implements ArcadeListener {
 		levelFilePaths.add("/images/hacman/hacman_lvl2.png");
 		levelFilePaths.add("/images/hacman/hacman_lvl3.png");
 
-		startNewGame();
+		try {
+			logo = ImageIO.read(HacManPlugin.class.getResourceAsStream("/images/hacman/hacman_logo.png"));
+		}
+		catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+
+		// startNewGame();
+	}
+
+	private void startAttractMode() {
+
+		logoScrollCount = 0;
+
+		logoScrollTimer = logoScrollPeriod;
+
+		timeSinceLastUpdate = System.nanoTime();
+
+		state = State.Attract;
 	}
 
 	private void startNewGame() {
 		numLivesCurrent = numLivesStart;
 		levelIndexCurrent = 0;
 		startLevel();
+		state = State.Play;
 	}
 
 	private void startLevel() {
@@ -64,7 +102,9 @@ public class HacManPlugin extends DisplayPlugin implements ArcadeListener {
 		//System.out.println(numLivesCurrent);
 
 		if (numLivesCurrent < 0) {
-			startNewGame();
+			
+			startAttractMode();
+
 			return;
 		}
 
@@ -86,52 +126,93 @@ public class HacManPlugin extends DisplayPlugin implements ArcadeListener {
 	@Override
 	public void arcadeButton(byte b) {
 
-		switch (b) {
-			case 'L':
-				scenePlay.MovePlayer(-1,0);
+		switch (state) {
+			case Attract:
+				if (b == 'L' || b == 'R' || b == 'U' || b == 'D') {
+					startNewGame();
+				}
 				break;
-			case 'R':
-				scenePlay.MovePlayer(1,0);
-				break;
-			case 'U':
-				scenePlay.MovePlayer(0,-1);
-				break;
-			case 'D':
-				scenePlay.MovePlayer(0,1);
-				break;
-			default:
-				break;
+			case Play:
+				switch (b) {
+				case 'L':
+					scenePlay.MovePlayer(-1,0);
+					break;
+				case 'R':
+					scenePlay.MovePlayer(1,0);
+					break;
+				case 'U':
+					scenePlay.MovePlayer(0,-1);
+					break;
+				case 'D':
+					scenePlay.MovePlayer(0,1);
+					break;
+				default:
+					break;
+				}
 		}
 
 	}
 
 	@Override
 	protected void loop() {
+
+		switch (state) {
+
+			case Attract:
+
+				long currentTime = System.nanoTime();
+				float dt = (float)(currentTime - timeSinceLastUpdate) / 1000000000.0f;
+				timeSinceLastUpdate = currentTime;
+
+				Display2D disp = getDisplay();
+				Graphics2D g = disp.getGraphics();
+
+				logoScrollTimer -= dt;
+				if (logoScrollTimer < 0) {
+					logoScrollTimer = logoScrollPeriod;
+					logoScrollCount++;
+				}
+				float percentage = logoScrollPeriod == 0 ? 1.0f : 1.0f - logoScrollTimer/logoScrollPeriod;
+
+				// auto-start the game after 3 cycles
+				if (logoScrollCount >= 3) {startNewGame(); break;}
+				
+				int logoPos = (int)(percentage * (logo.getWidth() + disp.getWidth() + 1));
+				g.drawImage(logo, disp.getWidth() + 1 -logoPos, 0, null);
+
+				break;
+
+			case Play:
+
+				// TODO: go to the main menu on a loss
+				if (scenePlay.state == ScenePlay.State.Lost) {
+					continueCurrentGame();
+				}
+
+				// on a win, the map gets incremented
+				if (scenePlay.state == ScenePlay.State.Won) {
+					advanceToNextLevel();
+				}
+
+				// update the game
+				scenePlay.update();
+
+				// display lives as hud
+				Display2D d = getDisplay();
+				for (int life = 0; life < numLivesCurrent; ++life) {
+
+					int col = life;
+					// right now, there's no way to get more lives, but... why not, right?
+					if (life > d.getWidth()) {continue;}
+					int row = d.getHeight() - 1;
+
+					d.setPixelHSB(col,row,0.15f,1,1);
+				}
+
+				break;
+		}
 		
-		// TODO: go to the main menu on a loss
-		if (scenePlay.state == ScenePlay.State.Lost) {
-			continueCurrentGame();
-		}
-
-		// on a win, the map gets incremented
-		if (scenePlay.state == ScenePlay.State.Won) {
-			advanceToNextLevel();
-		}
-
-		// update the game
-		scenePlay.update();
-
-		// display lives as hud
-		Display2D d = getDisplay();
-		for (int life = 0; life < numLivesCurrent; ++life) {
-
-			int col = life;
-			// right now, there's no way to get more lives, but... why not, right?
-			if (life > d.getWidth()) {continue;}
-			int row = d.getHeight() - 1;
-
-			d.setPixelHSB(col,row,0.15f,1,1);
-		}
+		
 	}
 
 }
