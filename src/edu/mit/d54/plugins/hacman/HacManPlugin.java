@@ -61,7 +61,7 @@ public class HacManPlugin extends DisplayPlugin implements ArcadeListener {
 
 		numLivesCurrent--;
 
-		System.out.println(numLivesCurrent);
+		//System.out.println(numLivesCurrent);
 
 		if (numLivesCurrent < 0) {
 			startNewGame();

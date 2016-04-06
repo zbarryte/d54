@@ -30,7 +30,7 @@ public class ScenePlay extends Object {
 	public State state;
 
 	private static final float kPlayerSpeed = 4.0f;
-	private static final float kGhostSpeed = 2.0f;
+	private static final float kGhostSpeed = 1.0f;
 
 	private Player player;
 
@@ -42,6 +42,8 @@ public class ScenePlay extends Object {
 	private ArrayList<Transform> walls;
 	private ArrayList<Pellet> pellets;
 	private ArrayList<Ghost> ghosts;
+
+	private boolean[][] unoccupied;
 
 	public ScenePlay(Display2D display, String levelName) throws IOException {
 
@@ -60,10 +62,16 @@ public class ScenePlay extends Object {
 		// read in the current level
 		BufferedImage levelImg = ImageIO.read(ScenePlay.class.getResourceAsStream(levelName));
 
+		// the ghosts will want to look at the empty tiles in order to figure out movement direction
+		unoccupied = new boolean[levelImg.getWidth()][levelImg.getHeight()];
+
 		// we generate walls, ghosts, pellets (regular and power), and the player from the map
 		// we do this by color
 		for (int iX = 0; iX < levelImg.getWidth(); ++iX) {
 			for (int iY = 0; iY < levelImg.getHeight(); ++iY) {
+
+				// we'll just mark off what's occupied
+				boolean isOccupied = false;
 
 				int pixelCol = levelImg.getRGB(iX,iY) & 0xFFFFFF;
 
@@ -73,6 +81,8 @@ public class ScenePlay extends Object {
 					wall.x = iX;
 					wall.y = iY;
 					walls.add(wall);
+
+					isOccupied = true;
 				}
 
 				// MS. HAC MAN
@@ -131,11 +141,7 @@ public class ScenePlay extends Object {
 
 				}
 
-				// // meh
-				// else {
-				// 	System.out.println("undetected pixel color: " + pixelCol);
-				// }
-
+				unoccupied[iX][iY] = !isOccupied;
 
 			}
 		}
@@ -210,6 +216,72 @@ public class ScenePlay extends Object {
 		}
 		// Then reset ghost and player positions; pellets should remain as they were
 
+		// Make Ghosts wander with some poorly-written and bad AI
+		for (Ghost ghost : ghosts) {
+
+			int col = (int)ghost.transform.x;
+			int row = (int)ghost.transform.y;
+
+			int colMax = d.getWidth();
+			int rowMax = d.getHeight();
+
+			int colW = col - 1 >= 0 ? col - 1 : colMax - 1;
+			int colE = col + 1 < colMax ? col + 1 : 0;
+			int rowN = row - 1 >= 0 ? row - 1 : rowMax - 1;
+			int rowS = row + 1 < rowMax ? row + 1 : 0;
+
+			boolean canMoveE = unoccupied[colE][row];
+			boolean canMoveN = unoccupied[col][rowN];
+			boolean canMoveW = unoccupied[colW][row];
+			boolean canMoveS = unoccupied[col][rowS];
+
+			int numChoices = 0;
+			if (canMoveE) {numChoices ++;}
+			if (canMoveN) {numChoices ++;}
+			if (canMoveW) {numChoices ++;}
+			if (canMoveS) {numChoices ++;}
+
+			if (ghost.transform.isStationary || (numChoices > 2 && numChoices != ghost.numChoicesPrev)) {
+
+				boolean didMove = false;
+				int direction = (int)(Math.random() * 3.5f);
+				for (int i = 0; i < 4; ++i) {
+
+					float dx = 0.0f;
+					float dy = 0.0f;
+
+					if (direction == 0 && canMoveE && (ghost.transform.vx >= 0 || numChoices == 1)) {
+						dx = 1.0f;
+						didMove = true;
+					} else if (direction == 1 && canMoveN && (ghost.transform.vy <= 0 || numChoices == 1)) {
+						dy = -1.0f;
+						didMove = true;
+					} else if (direction == 2 && canMoveW && (ghost.transform.vx <= 0 || numChoices == 1)) {
+						dx = -1.0f;
+						didMove = true;
+					} else if (direction == 3 && canMoveS &&  (ghost.transform.vy >= 0 || numChoices == 1)) {
+						dy = 1.0f;
+						didMove = true;
+					}
+					
+					if (didMove) {
+
+						// System.out.println("p: " + dx + ", " + dy + " :: numChoices: " + numChoices + " :: v: " + ghost.transform.vx + ", " + ghost.transform.vy);
+
+						ghost.transform.setVelocity(dx * kGhostSpeed,dy * kGhostSpeed);
+						break;
+					}
+
+					direction++;
+					if (direction > 3) {direction = 0;}
+				}
+
+				ghost.numChoicesPrev = numChoices;
+
+			}
+
+		}
+
 		// PHYSICS!
 		UpdatePhysicsTransforms(dt);
 
@@ -269,7 +341,9 @@ public class ScenePlay extends Object {
 	}
 
 	public void MovePlayer(float dx, float dy) {
-		player.transform.setVelocity(dx * kPlayerSpeed, dy * kPlayerSpeed);
+		float vx = dx * kPlayerSpeed;
+		float vy = dy * kPlayerSpeed;
+		player.transform.setVelocity(vx, vy);
 	}
 
 	private void UpdatePhysicsTransforms(float dt) {
@@ -306,7 +380,13 @@ public class ScenePlay extends Object {
 				}
 			}
 
-			if (!canMove) {continue;}
+			transform.isStationary = !canMove;
+
+			if (!canMove) {
+				transform.x = (int)transform.x;
+				transform.y = (int)transform.y;
+				continue;
+			}
 
 			// do move
 			transform.x = xNew;

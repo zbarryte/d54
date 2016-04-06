@@ -11,6 +11,8 @@ public class Transform extends Object {
 	public float startX;
 	public float startY;
 
+	public boolean isStationary;
+
 	public Transform() {
 
 	}
@@ -26,6 +28,8 @@ public class Transform extends Object {
 	}
 
 	public void reset() {
+
+		isStationary = true;
 		
 		x = startX;
 		y = startY;
