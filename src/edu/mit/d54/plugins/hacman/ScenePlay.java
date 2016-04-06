@@ -24,6 +24,9 @@ public class ScenePlay extends Object {
 	private static final float wooblinessPeriod = 7.5f;
 	private float wooblinessTimer;
 
+	private static final float pelletPulsePeriod = 4.0f;
+	private float pelletPulseTimer;
+
 	private Display2D d;
 
 	public enum State {Playing, Won, Lost};
@@ -336,19 +339,29 @@ public class ScenePlay extends Object {
 			float hue = 0.65f * (percentageUnwoobly);
 			d.setPixelHSB((int)wall.x,(int)wall.y,hue,1,1);
 		}
+
+		// make the pellets pulse because, grooviness
+		pelletPulseTimer -= dt;
+		if (pelletPulseTimer < 0) {
+			pelletPulseTimer = pelletPulsePeriod;
+		}
+
 		// draw pellets
 		for (Pellet pellet : pellets) {
-			float brightness = pellet.isPower ? 1.0f : 0.25f;
+			float brightness = pellet.isPower ? 1.0f : 0.35f;
+			float percentage = pelletPulsePeriod == 0 ? 0.0f : pelletPulseTimer/pelletPulsePeriod;
+			brightness *= 0.5f * (1.0f + Math.cos(2.0f * Math.PI * percentage)) * 0.25f + 0.75f;
 			d.setPixelHSB((int)pellet.transform.x,(int)pellet.transform.y,0,0,brightness);
 		}
+
 		// draw ghosts
 		for (Ghost ghost : ghosts) {
 			float hue = ghost.isWoobly ? 0.65f : ghost.hue;
 			d.setPixelHSB((int)ghost.transform.x,(int)ghost.transform.y,hue,1.0f,1.0f);
 		}
+
 		// draw player
 		d.setPixelHSB((int)player.transform.x,(int)player.transform.y,0.15f,1,1);
-		// draw fruit(?)
 
 	}
 
