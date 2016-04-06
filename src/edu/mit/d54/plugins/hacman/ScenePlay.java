@@ -35,8 +35,14 @@ public class ScenePlay extends Object {
 
 	private Display2D d;
 
-	public enum State {Playing, Won, Lost};
+	public enum State {Playing, Won, Lost, Winning, Losing,};
 	public State state;
+
+	private static final float winPeriod = 2.0f;
+	private float winTimer;
+
+	private static final float losePeriod = 2.0f;
+	private float loseTimer;
 
 	private static final float kPlayerSpeed = 4.0f;
 	private static final float kGhostSpeed = 2.0f;
@@ -208,6 +214,16 @@ public class ScenePlay extends Object {
 		}
 	}
 
+	private void lose() {
+		state = State.Losing;
+		loseTimer = losePeriod;
+	}
+
+	private void win() {
+		state = State.Winning;
+		winTimer = winPeriod;
+	}
+
 	public void update() {
 
 		// it's just nice to have a delta... and we need it later
@@ -215,127 +231,141 @@ public class ScenePlay extends Object {
 		float dt = (float)(currentTime - timeSinceLastUpdate) / 1000000000.0f;
 		timeSinceLastUpdate = currentTime;
 
-		// Advance to the next stage if all pellets have been eaten! (cycle back to the first if it's the last one)
-		if (pellets.size() <= 0) {state = State.Won;}
+		if (state == State.Winning) {
+			winTimer -= dt;
+			if (winTimer < 0) {state = State.Won;}
+		}
 
-		// Lose a life if the player gets haunted or whatever by a ghost
-		for (Ghost ghost : ghosts) {
-			if ((int)player.transform.x == (int)ghost.transform.x && (int)player.transform.y == (int)ghost.transform.y) {
-				
-				if (ghost.isWoobly) {
-					ghost.transform.reset();
-					ghost.isWoobly = false;
-				} else {
-					state = State.Lost;
+		if (state == State.Losing) {
+			loseTimer -= dt;
+			if (loseTimer < 0) {state = State.Lost;}
+		}
+
+		// Gameplay logic may only happen if we're playing
+		if (state == State.Playing) {
+
+			// Advance to the next stage if all pellets have been eaten! (cycle back to the first if it's the last one)
+			if (pellets.size() <= 0) {win();}
+
+			// Lose a life if the player gets haunted or whatever by a ghost
+			for (Ghost ghost : ghosts) {
+				if ((int)player.transform.x == (int)ghost.transform.x && (int)player.transform.y == (int)ghost.transform.y) {
+					
+					if (ghost.isWoobly) {
+						ghost.transform.reset();
+						ghost.isWoobly = false;
+					} else {
+						lose();
+					}
 				}
 			}
-		}
-		// Then reset ghost and player positions; pellets should remain as they were
+			// Then reset ghost and player positions; pellets should remain as they were
 
-		// Make Ghosts wander with some poorly-written and bad AI
-		if (hasPlayerMoved) {
+			// Make Ghosts wander with some poorly-written and bad AI
+			if (hasPlayerMoved) {
 
-			for (Ghost ghost : ghosts) {
+				for (Ghost ghost : ghosts) {
 
-				// what the ghosts do, btw, is actually kinda cool; they're modeled after the pac man ghosts,
-				// which, whenever possible, don't move backwards, creating the illusion of chase
+					// what the ghosts do, btw, is actually kinda cool; they're modeled after the pac man ghosts,
+					// which, whenever possible, don't move backwards, creating the illusion of chase
 
-				int col = (int)ghost.transform.x;
-				int row = (int)ghost.transform.y;
+					int col = (int)ghost.transform.x;
+					int row = (int)ghost.transform.y;
 
-				int colMax = d.getWidth();
-				int rowMax = d.getHeight();
+					int colMax = d.getWidth();
+					int rowMax = d.getHeight();
 
-				int colW = col - 1 >= 0 ? col - 1 : colMax - 1;
-				int colE = col + 1 < colMax ? col + 1 : 0;
-				int rowN = row - 1 >= 0 ? row - 1 : rowMax - 1;
-				int rowS = row + 1 < rowMax ? row + 1 : 0;
+					int colW = col - 1 >= 0 ? col - 1 : colMax - 1;
+					int colE = col + 1 < colMax ? col + 1 : 0;
+					int rowN = row - 1 >= 0 ? row - 1 : rowMax - 1;
+					int rowS = row + 1 < rowMax ? row + 1 : 0;
 
-				boolean canMoveE = unoccupied[colE][row];
-				boolean canMoveN = unoccupied[col][rowN];
-				boolean canMoveW = unoccupied[colW][row];
-				boolean canMoveS = unoccupied[col][rowS];
+					boolean canMoveE = unoccupied[colE][row];
+					boolean canMoveN = unoccupied[col][rowN];
+					boolean canMoveW = unoccupied[colW][row];
+					boolean canMoveS = unoccupied[col][rowS];
 
-				int numChoices = 0;
-				if (canMoveE) {numChoices ++;}
-				if (canMoveN) {numChoices ++;}
-				if (canMoveW) {numChoices ++;}
-				if (canMoveS) {numChoices ++;}
+					int numChoices = 0;
+					if (canMoveE) {numChoices ++;}
+					if (canMoveN) {numChoices ++;}
+					if (canMoveW) {numChoices ++;}
+					if (canMoveS) {numChoices ++;}
 
-				if (ghost.transform.isStationary || (numChoices > 2 && numChoices != ghost.numChoicesPrev)) {
+					if (ghost.transform.isStationary || (numChoices > 2 && numChoices != ghost.numChoicesPrev)) {
 
-					boolean didMove = false;
-					int direction = (int)(Math.random() * 3.5f);
-					for (int i = 0; i < 4; ++i) {
+						boolean didMove = false;
+						int direction = (int)(Math.random() * 3.5f);
+						for (int i = 0; i < 4; ++i) {
 
-						float dx = 0.0f;
-						float dy = 0.0f;
+							float dx = 0.0f;
+							float dy = 0.0f;
 
-						if (direction == 0 && canMoveE && (ghost.transform.vx >= 0 || numChoices == 1)) {
-							dx = 1.0f;
-							didMove = true;
-						} else if (direction == 1 && canMoveN && (ghost.transform.vy <= 0 || numChoices == 1)) {
-							dy = -1.0f;
-							didMove = true;
-						} else if (direction == 2 && canMoveW && (ghost.transform.vx <= 0 || numChoices == 1)) {
-							dx = -1.0f;
-							didMove = true;
-						} else if (direction == 3 && canMoveS &&  (ghost.transform.vy >= 0 || numChoices == 1)) {
-							dy = 1.0f;
-							didMove = true;
+							if (direction == 0 && canMoveE && (ghost.transform.vx >= 0 || numChoices == 1)) {
+								dx = 1.0f;
+								didMove = true;
+							} else if (direction == 1 && canMoveN && (ghost.transform.vy <= 0 || numChoices == 1)) {
+								dy = -1.0f;
+								didMove = true;
+							} else if (direction == 2 && canMoveW && (ghost.transform.vx <= 0 || numChoices == 1)) {
+								dx = -1.0f;
+								didMove = true;
+							} else if (direction == 3 && canMoveS &&  (ghost.transform.vy >= 0 || numChoices == 1)) {
+								dy = 1.0f;
+								didMove = true;
+							}
+							
+							if (didMove) {
+
+								// System.out.println("p: " + dx + ", " + dy + " :: numChoices: " + numChoices + " :: v: " + ghost.transform.vx + ", " + ghost.transform.vy);
+
+								ghost.transform.setVelocity(dx * kGhostSpeed,dy * kGhostSpeed);
+								break;
+							}
+
+							direction++;
+							if (direction > 3) {direction = 0;}
 						}
-						
-						if (didMove) {
 
-							// System.out.println("p: " + dx + ", " + dy + " :: numChoices: " + numChoices + " :: v: " + ghost.transform.vx + ", " + ghost.transform.vy);
+						ghost.numChoicesPrev = numChoices;
 
-							ghost.transform.setVelocity(dx * kGhostSpeed,dy * kGhostSpeed);
-							break;
-						}
-
-						direction++;
-						if (direction > 3) {direction = 0;}
 					}
 
-					ghost.numChoicesPrev = numChoices;
-
 				}
-
 			}
-		}
 
-		// PHYSICS!
-		UpdatePhysicsTransforms(dt);
+			// PHYSICS!
+			UpdatePhysicsTransforms(dt);
 
-		// UnWooblify Ghosts
-		if (wooblinessTimer > 0) {
-			wooblinessTimer -= dt;
-			if (wooblinessTimer < 0) {
+			// UnWooblify Ghosts
+			if (wooblinessTimer > 0) {
+				wooblinessTimer -= dt;
+				if (wooblinessTimer < 0) {
+					for (Ghost ghost : ghosts) {
+						ghost.isWoobly = false;
+					}
+				}
+			}
+
+			// Eat Pellets
+			boolean didEatPowerPellet = false;
+			ArrayList<Pellet> pelletsToRemove = new ArrayList<Pellet>();
+			for (Pellet pellet : pellets) {
+				if ((int)pellet.transform.x == (int)player.transform.x && (int)pellet.transform.y == (int)player.transform.y) {
+					if (pellet.isPower) {didEatPowerPellet = true;}
+					// System.out.println("om nom");
+					pelletsToRemove.add(pellet);
+				}
+			}
+			for (Pellet pellet : pelletsToRemove) {
+				pellets.remove(pellet);
+			}
+			// the ghosts get all woobly if you eat a power pellet
+			if (didEatPowerPellet) {
+				// System.out.println("POWER!");
 				for (Ghost ghost : ghosts) {
-					ghost.isWoobly = false;
+					wooblinessTimer = wooblinessPeriod;
+					ghost.isWoobly = true;
 				}
-			}
-		}
-
-		// Eat Pellets
-		boolean didEatPowerPellet = false;
-		ArrayList<Pellet> pelletsToRemove = new ArrayList<Pellet>();
-		for (Pellet pellet : pellets) {
-			if ((int)pellet.transform.x == (int)player.transform.x && (int)pellet.transform.y == (int)player.transform.y) {
-				if (pellet.isPower) {didEatPowerPellet = true;}
-				// System.out.println("om nom");
-				pelletsToRemove.add(pellet);
-			}
-		}
-		for (Pellet pellet : pelletsToRemove) {
-			pellets.remove(pellet);
-		}
-		// the ghosts get all woobly if you eat a power pellet
-		if (didEatPowerPellet) {
-			// System.out.println("POWER!");
-			for (Ghost ghost : ghosts) {
-				wooblinessTimer = wooblinessPeriod;
-				ghost.isWoobly = true;
 			}
 		}
 
