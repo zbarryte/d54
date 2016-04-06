@@ -62,9 +62,15 @@ public class ScenePlay extends Object {
 
 	private boolean hasPlayerMoved;
 
-	public ScenePlay(Display2D display, String levelName) throws IOException {
+	private int boardWidth;
+	private int boardHeight;
+
+	private int heightOffset;
+
+	public ScenePlay(Display2D display, String levelName, int _heightOffset) throws IOException {
 
 		d = display;
+		heightOffset = _heightOffset;
 
 		// we need to set up our arrays before we populate them
 		walls = new ArrayList<Transform>();
@@ -82,10 +88,15 @@ public class ScenePlay extends Object {
 		// the ghosts will want to look at the empty tiles in order to figure out movement direction
 		unoccupied = new boolean[levelImg.getWidth()][levelImg.getHeight()];
 
+		// we'll also use the level dimensions in the case of a mini display
+		boardWidth = levelImg.getWidth();
+		boardHeight = levelImg.getHeight();
+
 		// we generate walls, ghosts, pellets (regular and power), and the player from the map
 		// we do this by color
-		for (int iX = 0; iX < levelImg.getWidth(); ++iX) {
-			for (int iY = 0; iY < levelImg.getHeight(); ++iY) {
+
+		for (int iX = 0; iX < boardWidth; ++iX) {
+			for (int iY = 0; iY < boardHeight; ++iY) {
 
 				// we'll just mark off what's occupied
 				boolean isOccupied = false;
@@ -244,6 +255,9 @@ public class ScenePlay extends Object {
 		// Gameplay logic may only happen if we're playing
 		if (state == State.Playing) {
 
+			// PHYSICS!
+			UpdatePhysicsTransforms(dt);
+
 			// Advance to the next stage if all pellets have been eaten! (cycle back to the first if it's the last one)
 			if (pellets.size() <= 0) {win();}
 
@@ -272,8 +286,8 @@ public class ScenePlay extends Object {
 					int col = (int)ghost.transform.x;
 					int row = (int)ghost.transform.y;
 
-					int colMax = d.getWidth();
-					int rowMax = d.getHeight();
+					int colMax = boardWidth;
+					int rowMax = boardHeight;
 
 					int colW = col - 1 >= 0 ? col - 1 : colMax - 1;
 					int colE = col + 1 < colMax ? col + 1 : 0;
@@ -333,9 +347,6 @@ public class ScenePlay extends Object {
 				}
 			}
 
-			// PHYSICS!
-			UpdatePhysicsTransforms(dt);
-
 			// UnWooblify Ghosts
 			if (wooblinessTimer > 0) {
 				wooblinessTimer -= dt;
@@ -378,7 +389,7 @@ public class ScenePlay extends Object {
 			float hue = 0.65f * (percentageUnwoobly);
 			float percentageWon = winPeriod == 0 ? 0.0f : winTimer/winPeriod;
 			float saturation = (float)(0.5f * (1.0f + Math.cos(Math.PI * 8.0f * percentageWon)));
-			d.setPixelHSB((int)wall.x,(int)wall.y,hue,saturation,1);
+			d.setPixelHSB((int)wall.x,(int)wall.y + heightOffset,hue,saturation,1);
 		}
 
 		// make the pellets pulse because, grooviness
@@ -392,7 +403,7 @@ public class ScenePlay extends Object {
 			float brightness = pellet.isPower ? 1.0f : 0.35f;
 			float pulsePercentage = pelletPulsePeriod == 0 ? 0.0f : pelletPulseTimer/pelletPulsePeriod;
 			brightness *= 0.5f * (1.0f + Math.cos(2.0f * Math.PI * pulsePercentage)) * 0.25f + 0.75f;
-			d.setPixelHSB((int)pellet.transform.x,(int)pellet.transform.y,0,0,brightness);
+			d.setPixelHSB((int)pellet.transform.x,(int)pellet.transform.y + heightOffset,0,0,brightness);
 		}
 
 		// pulse ghosts toooo
@@ -406,7 +417,7 @@ public class ScenePlay extends Object {
 			float pulsePercentage = ghostPulsePeriod == 0 ? 0.0f : 1.0f - ghostPulseTimer/ghostPulsePeriod;
 			float brightness = (float)(0.5f * (1.0f + Math.cos(2.0f * Math.PI * pulsePercentage)) * 0.25f + 0.75f);
 			float hue = ghost.isWoobly ? 0.65f : ghost.hue;
-			d.setPixelHSB((int)ghost.transform.x,(int)ghost.transform.y,hue,1.0f,brightness);
+			d.setPixelHSB((int)ghost.transform.x,(int)ghost.transform.y + heightOffset,hue,1.0f,brightness);
 		}
 
 		// only pulse the player when moving!
@@ -426,7 +437,7 @@ public class ScenePlay extends Object {
 			float losePercentage = losePeriod == 0.0f ? 1.0f : loseTimer/losePeriod;
 			playerBrightness *= losePercentage;
 		}
-		d.setPixelHSB((int)player.transform.x,(int)player.transform.y,0.15f,1,playerBrightness);
+		d.setPixelHSB((int)player.transform.x,(int)player.transform.y + heightOffset,0.15f,1,playerBrightness);
 
 	}
 
@@ -452,8 +463,8 @@ public class ScenePlay extends Object {
 			float yNew = transform.y + dy;
 
 			// wrap around the board
-			float width = d.getWidth();
-			float height = d.getHeight();
+			float width = boardWidth;
+			float height = boardHeight;
 			if (xNew >= width) {xNew -= width;}
 			if (xNew < 0) {xNew += width;}
 			if (yNew >= height) {yNew -= height;}
