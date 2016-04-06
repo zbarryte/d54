@@ -45,6 +45,8 @@ public class ScenePlay extends Object {
 
 	private boolean[][] unoccupied;
 
+	private boolean hasPlayerMoved;
+
 	public ScenePlay(Display2D display, String levelName) throws IOException {
 
 		d = display;
@@ -185,6 +187,8 @@ public class ScenePlay extends Object {
 		// if we don't set the state, the game will still think it's losing/winning
 		state = State.Playing;
 
+		hasPlayerMoved = false;
+
 		player.transform.reset();
 
 		for (Ghost ghost : ghosts) {
@@ -217,69 +221,75 @@ public class ScenePlay extends Object {
 		// Then reset ghost and player positions; pellets should remain as they were
 
 		// Make Ghosts wander with some poorly-written and bad AI
-		for (Ghost ghost : ghosts) {
+		if (hasPlayerMoved) {
 
-			int col = (int)ghost.transform.x;
-			int row = (int)ghost.transform.y;
+			for (Ghost ghost : ghosts) {
 
-			int colMax = d.getWidth();
-			int rowMax = d.getHeight();
+				// what the ghosts do, btw, is actually kinda cool; they're modeled after the pac man ghosts,
+				// which, whenever possible, don't move backwards, creating the illusion of chase
 
-			int colW = col - 1 >= 0 ? col - 1 : colMax - 1;
-			int colE = col + 1 < colMax ? col + 1 : 0;
-			int rowN = row - 1 >= 0 ? row - 1 : rowMax - 1;
-			int rowS = row + 1 < rowMax ? row + 1 : 0;
+				int col = (int)ghost.transform.x;
+				int row = (int)ghost.transform.y;
 
-			boolean canMoveE = unoccupied[colE][row];
-			boolean canMoveN = unoccupied[col][rowN];
-			boolean canMoveW = unoccupied[colW][row];
-			boolean canMoveS = unoccupied[col][rowS];
+				int colMax = d.getWidth();
+				int rowMax = d.getHeight();
 
-			int numChoices = 0;
-			if (canMoveE) {numChoices ++;}
-			if (canMoveN) {numChoices ++;}
-			if (canMoveW) {numChoices ++;}
-			if (canMoveS) {numChoices ++;}
+				int colW = col - 1 >= 0 ? col - 1 : colMax - 1;
+				int colE = col + 1 < colMax ? col + 1 : 0;
+				int rowN = row - 1 >= 0 ? row - 1 : rowMax - 1;
+				int rowS = row + 1 < rowMax ? row + 1 : 0;
 
-			if (ghost.transform.isStationary || (numChoices > 2 && numChoices != ghost.numChoicesPrev)) {
+				boolean canMoveE = unoccupied[colE][row];
+				boolean canMoveN = unoccupied[col][rowN];
+				boolean canMoveW = unoccupied[colW][row];
+				boolean canMoveS = unoccupied[col][rowS];
 
-				boolean didMove = false;
-				int direction = (int)(Math.random() * 3.5f);
-				for (int i = 0; i < 4; ++i) {
+				int numChoices = 0;
+				if (canMoveE) {numChoices ++;}
+				if (canMoveN) {numChoices ++;}
+				if (canMoveW) {numChoices ++;}
+				if (canMoveS) {numChoices ++;}
 
-					float dx = 0.0f;
-					float dy = 0.0f;
+				if (ghost.transform.isStationary || (numChoices > 2 && numChoices != ghost.numChoicesPrev)) {
 
-					if (direction == 0 && canMoveE && (ghost.transform.vx >= 0 || numChoices == 1)) {
-						dx = 1.0f;
-						didMove = true;
-					} else if (direction == 1 && canMoveN && (ghost.transform.vy <= 0 || numChoices == 1)) {
-						dy = -1.0f;
-						didMove = true;
-					} else if (direction == 2 && canMoveW && (ghost.transform.vx <= 0 || numChoices == 1)) {
-						dx = -1.0f;
-						didMove = true;
-					} else if (direction == 3 && canMoveS &&  (ghost.transform.vy >= 0 || numChoices == 1)) {
-						dy = 1.0f;
-						didMove = true;
+					boolean didMove = false;
+					int direction = (int)(Math.random() * 3.5f);
+					for (int i = 0; i < 4; ++i) {
+
+						float dx = 0.0f;
+						float dy = 0.0f;
+
+						if (direction == 0 && canMoveE && (ghost.transform.vx >= 0 || numChoices == 1)) {
+							dx = 1.0f;
+							didMove = true;
+						} else if (direction == 1 && canMoveN && (ghost.transform.vy <= 0 || numChoices == 1)) {
+							dy = -1.0f;
+							didMove = true;
+						} else if (direction == 2 && canMoveW && (ghost.transform.vx <= 0 || numChoices == 1)) {
+							dx = -1.0f;
+							didMove = true;
+						} else if (direction == 3 && canMoveS &&  (ghost.transform.vy >= 0 || numChoices == 1)) {
+							dy = 1.0f;
+							didMove = true;
+						}
+						
+						if (didMove) {
+
+							// System.out.println("p: " + dx + ", " + dy + " :: numChoices: " + numChoices + " :: v: " + ghost.transform.vx + ", " + ghost.transform.vy);
+
+							ghost.transform.setVelocity(dx * kGhostSpeed,dy * kGhostSpeed);
+							break;
+						}
+
+						direction++;
+						if (direction > 3) {direction = 0;}
 					}
-					
-					if (didMove) {
 
-						// System.out.println("p: " + dx + ", " + dy + " :: numChoices: " + numChoices + " :: v: " + ghost.transform.vx + ", " + ghost.transform.vy);
+					ghost.numChoicesPrev = numChoices;
 
-						ghost.transform.setVelocity(dx * kGhostSpeed,dy * kGhostSpeed);
-						break;
-					}
-
-					direction++;
-					if (direction > 3) {direction = 0;}
 				}
 
-				ghost.numChoicesPrev = numChoices;
-
 			}
-
 		}
 
 		// PHYSICS!
@@ -343,6 +353,9 @@ public class ScenePlay extends Object {
 	}
 
 	public void MovePlayer(float dx, float dy) {
+
+		hasPlayerMoved = true;
+
 		float vx = dx * kPlayerSpeed;
 		float vy = dy * kPlayerSpeed;
 		player.transform.setVelocity(vx, vy);
@@ -382,7 +395,7 @@ public class ScenePlay extends Object {
 				}
 			}
 
-			transform.isStationary = !canMove;
+			transform.isStationary = !canMove || (dx == 0 && dy == 0);
 
 			if (!canMove) {
 				transform.x = (int)transform.x;
