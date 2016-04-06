@@ -93,7 +93,7 @@ public class HacManPlugin extends DisplayPlugin implements ArcadeListener {
 		String fileName = levelFilePaths.get(levelIndexCurrent);
 
 		try{
-			int heightOffset = isMini ? 2 : 0;
+			int heightOffset = isMini ? 4 : 0;
 		  	scenePlay = new ScenePlay(getDisplay(),fileName,heightOffset);
 		}catch(IOException e){
 		  	e.printStackTrace();
@@ -183,7 +183,7 @@ public class HacManPlugin extends DisplayPlugin implements ArcadeListener {
 				if (logoScrollCount >= 3) {startNewGame(); break;}
 				
 				int logoPos = (int)(percentage * (logo.getWidth() + disp.getWidth() + 1));
-				g.drawImage(logo, disp.getWidth() + 1 -logoPos, (isMini ? 2 : 0), null);
+				g.drawImage(logo, disp.getWidth() + 1 -logoPos, (isMini ? 4 : 0), null);
 
 				break;
 
@@ -209,7 +209,7 @@ public class HacManPlugin extends DisplayPlugin implements ArcadeListener {
 					int col = life;
 					// right now, there's no way to get more lives, but... why not, right?
 					if (life > d.getWidth()) {continue;}
-					int row = d.getHeight() - 1 - (isMini ? 4 : 0);
+					int row = d.getHeight() - 1 - (isMini ? 2 : 0);
 
 					d.setPixelHSB(col,row,0.15f,1,1);
 				}
