@@ -113,13 +113,25 @@ public class HacManPlugin extends DisplayPlugin implements ArcadeListener {
 			continueCurrentGame();
 		}
 
-		// TODO: increment the map on a win
+		// on a win, the map gets incremented
 		if (scenePlay.state == ScenePlay.State.Won) {
 			advanceToNextLevel();
 		}
 
 		// update the game
 		scenePlay.update();
+
+		// display lives as hud
+		Display2D d = getDisplay();
+		for (int life = 0; life < numLivesCurrent; ++life) {
+
+			int col = life;
+			// right now, there's no way to get more lives, but... why not, right?
+			if (life > d.getWidth()) {continue;}
+			int row = d.getHeight() - 1;
+
+			d.setPixelHSB(col,row,0.15f,1,1);
+		}
 	}
 
 }

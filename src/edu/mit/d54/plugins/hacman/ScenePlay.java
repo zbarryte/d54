@@ -33,7 +33,7 @@ public class ScenePlay extends Object {
 	public State state;
 
 	private static final float kPlayerSpeed = 4.0f;
-	private static final float kGhostSpeed = 1.0f;
+	private static final float kGhostSpeed = 2.0f;
 
 	private Player player;
 
@@ -192,10 +192,13 @@ public class ScenePlay extends Object {
 
 		hasPlayerMoved = false;
 
+		wooblinessTimer = 0;
+
 		player.transform.reset();
 
 		for (Ghost ghost : ghosts) {
 			ghost.transform.reset();
+			ghost.isWoobly = false;
 		}
 	}
 
